@@ -62,7 +62,7 @@ class LinkySerClient:
     def _json(body: bytes) -> Any:
         return json.loads(body.decode("utf-8"))
 
-    async def login(self) -> None:
+    async def login(self) -> str:
         """OAuth complet : session -> code -> access_token -> PASC."""
         # 1. authentification (cookie de session)
         status, _, body = await self._request(
@@ -120,6 +120,8 @@ class LinkySerClient:
         if not pascs:
             raise LinkySerClientError("aucun point d'accès sur le compte")
         self.pasc_id = pascs[0]["id"]
+        assert self.pasc_id is not None
+        return self.pasc_id
 
     async def export_csv(self, date_debut: datetime,
                          date_fin: datetime) -> str:
@@ -145,6 +147,16 @@ class LinkySerClient:
         status, _, body = await self._request(
             "POST", API_URL + "/rest/interfaces/aelgrd/historiqueDeMesure/exporter",
             json=payload)
+        if status in (401, 403):
+            # token expiré (le portail le révoque au bout de ~24 h) :
+            # invalide tout et re-authentifie une fois avant de réessayer
+            _LOGGER.warning("Linky SER: token expiré (HTTP %s), re-login", status)
+            self._token = None
+            self.pasc_id = None
+            if self._session.cookie_jar is not None:
+                self._session.cookie_jar.clear()
+            await self.login()
+            return await self.export_csv(date_debut, date_fin)
         if status != 200:
             raise LinkySerClientError(f"export HTTP {status}")
         return body.decode("latin-1")

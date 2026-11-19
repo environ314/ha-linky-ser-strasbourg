@@ -27,15 +27,15 @@ STEP_USER = vol.Schema({
 
 
 async def _test_login(hass: HomeAssistant, email: str,
-                      password: str) -> str | None:
-    """Vérifie le login et retourne l'erreur éventuelle."""
+                      password: str) -> tuple[str | None, str | None]:
+    """Vérifie le login : retourne (erreur éventuelle, id PASC)."""
     session = async_get_clientsession(hass)
     client = LinkySerClient(session, email, password)
     try:
-        await client.login()
-        return None
+        pasc = await client.login()
+        return None, str(pasc)
     except (LinkySerClientError, aiohttp.ClientError) as err:
-        return str(err)
+        return str(err), None
 
 
 class LinkySerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -47,9 +47,13 @@ class LinkySerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                              ) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            err = await _test_login(self.hass, user_input[CONF_EMAIL],
-                                    user_input[CONF_PASSWORD])
+            err, pasc = await _test_login(self.hass, user_input[CONF_EMAIL],
+                                          user_input[CONF_PASSWORD])
             if err is None:
+                # un seul compteur par point de comptage (PASC) : refuse
+                # la création d'une entrée en double sur le même PASC
+                await self.async_set_unique_id(str(pasc))
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=f"Linky SER ({user_input[CONF_EMAIL]})",
                     data={

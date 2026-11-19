@@ -47,6 +47,7 @@ STATS_CONSUMPTION_META = {
     "unit_of_measurement": "kWh",
     "unit_class": "energy",
     "mean_type": "none",
+    "has_sum": True,
 }
 STATS_COST_META = {
     "statistic_id": STAT_COST,
@@ -55,6 +56,7 @@ STATS_COST_META = {
     "unit_of_measurement": "EUR",
     "unit_class": None,
     "mean_type": "none",
+    "has_sum": True,
 }
 
 
@@ -173,51 +175,76 @@ class LinkySerHub:
         return out
 
     async def sync_now(self) -> dict[str, Any]:
-        """Cycle complet : OAuth -> export 5 j -> UPSERT stats externes."""
+        """Cycle complet : OAuth -> export 5 j -> UPSERT stats externes.
+
+        Idempotent, verrouillé, et robuste : une indisponibilité du portail
+        SER à 08h00 est journalisée sans casser la boucle HA ; le prochain
+        tick (ou le bouton) relancera le cycle.
+        """
         from homeassistant.components.recorder.statistics import (
             async_add_external_statistics)
         async with self._lock:
-            last = await self._last_state()
-            start_ref = min((s for s, _ in last.values()), default=None)
-            now = dt_util.now()
-            window_start = now - timedelta(days=LOOKBACK_DAYS)
-            if start_ref is not None:
-                window_start = min(window_start,
-                                   start_ref + timedelta(hours=1))
-            client = self._get_client()
-            csv_text = await client.export_csv(
-                dt_util.as_utc(window_start), dt_util.as_utc(now))
-            hourly = parse_hourly(csv_text)
-            # uniquement les heures postérieures au dernier point connu
-            if start_ref is not None:
-                ref = start_ref
-                hourly = {h: kwh for h, kwh in hourly.items()
-                          if h.replace(tzinfo=TZ_PARIS) > ref}
-            # continuité des cumuls : reprise des derniers sum en base
-            cum_kwh = last.get(STAT_CONSUMPTION, (None, 0.0))[1]
-            cum_eur = last.get(STAT_COST, (None, 0.0))[1]
-            kwh_stats, eur_stats = [], []
-            for hour in sorted(hourly):
-                kwh = hourly[hour]
-                cum_kwh = round(cum_kwh + kwh, 5)
-                cum_eur = round(cum_eur + kwh * self.price, 5)
-                iso = hour.replace(tzinfo=TZ_PARIS)
-                kwh_stats.append({"start": iso, "sum": cum_kwh,
-                                  "state": cum_kwh})
-                eur_stats.append({"start": iso, "sum": cum_eur,
-                                  "state": cum_eur})
-            result = {"points": len(kwh_stats),
-                      "kwh_total": round(cum_kwh, 3),
-                      "cost_total": round(cum_eur, 3),
-                      "window": f"{window_start:%d/%m} -> {now:%d/%m}"}
-            if kwh_stats:
-                async_add_external_statistics(
-                    self.hass, dict(STATS_CONSUMPTION_META), kwh_stats)
-                async_add_external_statistics(
-                    self.hass, dict(STATS_COST_META), eur_stats)
-            self.hass.bus.async_fire(f"{DOMAIN}_synced", result)
-            _LOGGER.info("Linky SER sync: %s", result)
-            return result
+            try:
+                return await self._sync_locked(async_add_external_statistics)
+            except LinkySerClientError as err:
+                _LOGGER.error("Linky SER: échec de synchronisation "
+                              "(portail indisponible ?): %s", err)
+            except aiohttp.ClientError as err:
+                _LOGGER.error("Linky SER: erreur réseau pendant la "
+                              "synchronisation: %s", err)
+            return {"points": 0, "error": True}
+
+    async def _sync_locked(self, async_add_external_statistics) -> dict[str, Any]:
+        last = await self._last_state()
+        last_conso_ts, conso_sum = last.get(
+            STAT_CONSUMPTION, (None, 0.0))
+        last_cost_ts, cost_sum = last.get(STAT_COST, (None, 0.0))
+        now = dt_util.now()
+        window_start = now - timedelta(days=LOOKBACK_DAYS)
+        if last_conso_ts is not None:
+            window_start = min(window_start,
+                               last_conso_ts + timedelta(hours=1))
+        client = self._get_client()
+        csv_text = await client.export_csv(
+            dt_util.as_utc(window_start), dt_util.as_utc(now))
+        hourly = parse_hourly(csv_text)
+        # découplage : chaque statistique ne reçoit que les heures
+        # POSTÉRIEURES à SON dernier point — si l'une a pris de l'avance
+        # sur l'autre, son cumul n'est pas décalé
+        conso_rows = self._rows(hourly, last_conso_ts)
+        cost_rows = self._rows(hourly, last_cost_ts)
+        price = self.price
+        kwh_stats, cum_kwh = [], conso_sum
+        for hour in sorted(conso_rows):
+            cum_kwh = round(cum_kwh + conso_rows[hour], 5)
+            kwh_stats.append({"start": hour.replace(tzinfo=TZ_PARIS),
+                              "sum": cum_kwh, "state": cum_kwh})
+        eur_stats, cum_eur = [], cost_sum
+        for hour in sorted(cost_rows):
+            cum_eur = round(cum_eur + cost_rows[hour] * price, 5)
+            eur_stats.append({"start": hour.replace(tzinfo=TZ_PARIS),
+                              "sum": cum_eur, "state": cum_eur})
+        result = {"points": len(kwh_stats),
+                  "kwh_total": round(cum_kwh, 3),
+                  "cost_total": round(cum_eur, 3),
+                  "window": f"{window_start:%d/%m} -> {now:%d/%m}"}
+        if kwh_stats:
+            async_add_external_statistics(
+                self.hass, dict(STATS_CONSUMPTION_META), kwh_stats)
+            async_add_external_statistics(
+                self.hass, dict(STATS_COST_META), eur_stats)
+        self.hass.bus.async_fire(f"{DOMAIN}_synced", result)
+        _LOGGER.info("Linky SER sync: %s", result)
+        return result
+
+    @staticmethod
+    def _rows(hourly: dict[datetime, float],
+              last_ts: datetime | None) -> dict[datetime, float]:
+        """Heures postérieures au dernier point de CETTE statistique."""
+        if last_ts is None:
+            return hourly
+        return {h: kwh for h, kwh in hourly.items()
+                if h.replace(tzinfo=TZ_PARIS) > last_ts}
 
 
 async def async_unload_entry(hass: HomeAssistant,

@@ -14,6 +14,12 @@
     },
     "error": {
       "invalid_auth": "Login refused: check the email address and password."
+    },
+    "abort": {
+      "already_configured": {
+        "name": "Device already configured",
+        "description": "This meter (PASC) is already configured."
+      }
     }
   },
   "options": {

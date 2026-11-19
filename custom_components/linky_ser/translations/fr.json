@@ -14,6 +14,12 @@
     },
     "error": {
       "invalid_auth": "Connexion refusée : vérifie l'adresse mail et le mot de passe."
+    },
+    "abort": {
+      "already_configured": {
+        "name": "Appareil déjà configuré",
+        "description": "Ce compteur (PASC) est déjà configuré."
+      }
     }
   },
   "options": {
