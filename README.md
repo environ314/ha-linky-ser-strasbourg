@@ -17,17 +17,23 @@ Elle récupère la **courbe de charge** (puissance moyenne par pas de 30 min) et
 - **Synchronisation manuelle** : bouton `button.linky_ser_sync` **et** service `linky_ser.sync_now`.
 - Léger : un cycle par jour, aucune entité température/puissance superflue.
 
-## Installation via HACS
+## Installation via le Marketplace (ex-HACS)
 
-1. Ouvre **HACS** (bouton `...` en haut à droite) → **Dépôts personnalisés** (Custom repositories).
-2. Ajoute ce dépôt : catégorie **Integration**.
-3. **HACS → Intégrations → Linky SER** → **Télécharger**, puis **redémarre Home Assistant**.
+Depuis Home Assistant **2026.11**, HACS a été remplacé par le **Marketplace intégré** (Paramètres → Marketplace). HACS est migré automatiquement et n'est plus installable séparément.
+
+1. Ouvre **Paramètres → Marketplace** (accepte l'avertissement communauté à la première ouverture).
+2. **⋮ (menu en haut à droite) → Ajouter depuis un lien / Add from link** : colle l'URL du dépôt `https://github.com/environ314/ha-linky-ser-strasbourg` (les dépôts personnalisés demandent une connexion GitHub par signature d'appareil).
+3. **Marketplace → Linky SER Strasbourg → Installer** : la configuration démarre directement, **sans redémarrage** (l'installation d'une nouvelle intégration ne nécessite pas de restart ; les **mises à jour** ultérieures, oui).
 4. **Paramètres → Appareils et services → Ajouter une intégration → Linky SER** :
    - adresse mail et mot de passe du compte MaConsoLinky (le login est testé immédiatement) ;
-   - tarif en **€/kWh** (modifiable ensuite via *Configurer*).
+   - historique initial (jours) et tarif en **€/kWh** (modifiable ensuite via *Configurer*).
 5. Le point de comptage (PASC) est **découvert automatiquement** après connexion — rien à saisir.
 
 Installation manuelle : copie `custom_components/linky_ser/` dans `<config>/custom_components/` et redémarre HA.
+
+## Pourquoi redémarrer après une mise à jour du code ?
+
+Le code Python d'une intégration est chargé en mémoire par l'interpréteur : remplacer les fichiers sur disque ne recharge pas les modules déjà importés. C'est pourquoi **l'installation initiale** d'une intégration ne nécessite pas de redémarrage (elle n'était pas encore chargée), mais **une mise à jour du code, si** — c'est le comportement officiel du Marketplace sous 2026.11 (« Updates still need a restart for now »). Un « Reload » de l'entrée de configuration ré-exécute le *setup*, mais ne garantit pas le rechargement des modules Python modifiés.
 
 ## Affichage dans le dashboard Énergie
 
