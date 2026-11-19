@@ -8,7 +8,8 @@
         "data": {
           "email": "Email address",
           "password": "Password",
-          "price": "Price (€/kWh)"
+          "price": "Price (€/kWh)",
+          "initial_history_days": "Initial history (days) — automatic backfill on first setup"
         }
       }
     },
@@ -35,7 +36,17 @@
   "services": {
     "sync_now": {
       "name": "Sync now",
-      "description": "Runs a full cycle (login + 5-day export + statistics injection)."
+      "description": "Runs a full cycle (login + 7-day export + statistics injection)."
+    },
+    "import_history": {
+      "name": "Import history",
+      "description": "Fetches the SER load curve over the requested period in 30-day chunks (newest first), rebuilds the running total in continuity with existing data, then re-imports the whole history (coherent overwrite of existing timestamps).",
+      "fields": {
+        "days": {
+          "name": "Days of history",
+          "description": "How far back to go (the import stops automatically at the start of the meter's available history)."
+        }
+      }
     }
   }
 }

@@ -2,5 +2,27 @@ sync_now:
   name: Synchroniser maintenant
   description: >-
     Déclenche un cycle complet : connexion MaConsoLinky SER, export de la
-    courbe de charge des 5 derniers jours, puis injection/écrasement des
+    courbe de charge des 7 derniers jours, puis injection/écrasement des
     statistiques ser:linky_consumption (kWh) et ser:linky_cost (€).
+import_history:
+  name: Importer l'historique
+  description: >-
+    Récupère la courbe de charge SER sur la période demandée par tranches
+    de 30 jours (du plus récent au plus ancien), recalcule la somme
+    cumulée en continuité de la base existante, puis réinjecte tout
+    l'historique (écrasement cohérent des timestamps existants).
+  fields:
+    days:
+      name: Jours d'historique
+      description: >-
+        Nombre de jours à remonter dans le temps (au-delà, l'import
+        s'arrête automatiquement au début de l'historique du compteur).
+      required: false
+      default: 365
+      selector:
+        number:
+          min: 7
+          max: 1095
+          step: 1
+          unit_of_measurement: jours
+          mode: slider

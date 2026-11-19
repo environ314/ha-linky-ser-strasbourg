@@ -8,7 +8,8 @@
         "data": {
           "email": "Adresse mail",
           "password": "Mot de passe",
-          "price": "Tarif (€/kWh)"
+          "price": "Tarif (€/kWh)",
+          "initial_history_days": "Historique initial (jours) — import automatique au premier lancement"
         }
       }
     },
@@ -35,7 +36,17 @@
   "services": {
     "sync_now": {
       "name": "Synchroniser maintenant",
-      "description": "Déclenche un cycle complet (connexion + export 5 jours + injection des statistiques)."
+      "description": "Déclenche un cycle complet (connexion + export 7 jours + injection des statistiques)."
+    },
+    "import_history": {
+      "name": "Importer l'historique",
+      "description": "Récupère la courbe de charge SER sur la période demandée par tranches de 30 jours (du plus récent au plus ancien), recalcule la somme cumulée en continuité de la base existante, puis réinjecte tout l'historique (écrasement cohérent des timestamps existants).",
+      "fields": {
+        "days": {
+          "name": "Jours d'historique",
+          "description": "Nombre de jours à remonter (l'import s'arrête automatiquement au début de l'historique disponible du compteur)."
+        }
+      }
     }
   }
 }

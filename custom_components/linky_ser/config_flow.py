@@ -14,8 +14,8 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import dt as dt_util
 
 from .api import LinkySerClient, LinkySerClientError
-from .const import (CONF_EMAIL, CONF_PASSWORD, CONF_PRICE, DEFAULT_PRICE,
-                    DOMAIN)
+from .const import (CONF_EMAIL, CONF_INITIAL_HISTORY, CONF_PASSWORD,
+                   CONF_PRICE, DEFAULT_PRICE, DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +23,8 @@ STEP_USER = vol.Schema({
     vol.Required(CONF_EMAIL): str,
     vol.Required(CONF_PASSWORD): str,
     vol.Required(CONF_PRICE, default=DEFAULT_PRICE): vol.Coerce(float),
+    vol.Required(CONF_INITIAL_HISTORY, default=365): vol.All(
+        vol.Coerce(int), vol.Range(min=7, max=1095)),
 })
 
 
@@ -59,6 +61,8 @@ class LinkySerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data={
                         CONF_EMAIL: user_input[CONF_EMAIL],
                         CONF_PASSWORD: user_input[CONF_PASSWORD],
+                        CONF_INITIAL_HISTORY:
+                            user_input[CONF_INITIAL_HISTORY],
                     },
                     options={CONF_PRICE: user_input[CONF_PRICE]},
                 )

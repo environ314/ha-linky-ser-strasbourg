@@ -15,12 +15,12 @@ import json
 import logging
 import re
 import secrets
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timedelta
+from typing import Any, AsyncIterator
 
 import aiohttp
 
-from .const import API_URL, CLIENT_ID, REDIRECT_URI, USER_AGENT
+from .const import API_URL, CHUNK_DAYS, CLIENT_ID, REDIRECT_URI, USER_AGENT
 
 _LOGGER = logging.getLogger(__name__)
 TIMEOUT = aiohttp.ClientTimeout(total=60)
@@ -160,3 +160,21 @@ class LinkySerClient:
         if status != 200:
             raise LinkySerClientError(f"export HTTP {status}")
         return body.decode("latin-1")
+
+    async def export_csv_chunked(
+        self, date_debut: datetime, date_fin: datetime,
+    ) -> AsyncIterator[str]:
+        """Export long : découpe en fenêtres de 30 jours max.
+
+        Parcourt du PLUS RÉCENT vers le plus ancien, avec une pause
+        courte entre requêtes pour ménager le portail SER. Chaque
+        élément est un CSV (texte latin-1) ; les dates sont UTC.
+        """
+        end = date_fin
+        while end > date_debut:
+            start = max(date_debut, end - timedelta(days=CHUNK_DAYS))
+            yield await self.export_csv(start, end)
+            if start <= date_debut:
+                return
+            await asyncio.sleep(0.5)  # pause entre tranches (portail SER)
+            end = start

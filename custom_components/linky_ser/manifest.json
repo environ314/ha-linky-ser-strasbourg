@@ -13,5 +13,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/environ314/ha-linky-ser-strasbourg/issues",
   "requirements": [],
-  "version": "1.0.1"
+  "version": "1.1.0"
 }

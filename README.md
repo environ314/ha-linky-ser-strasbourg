@@ -11,7 +11,8 @@ Elle récupère la **courbe de charge** (puissance moyenne par pas de 30 min) et
   - `ser:linky_consumption` — consommation horaire en **kWh** (somme cumulée) ;
   - `ser:linky_cost` — coût cumulé en **€** au tarif que tu configures.
 - **Synchro quotidienne à 08h00** (heure locale de ton HA).
-- **Fenêtre glissante de 5 jours** : chaque cycle ré-exporte les 5 derniers jours et écrase/complète les heures manquantes — les retards de publication de 24-48 h (fréquents le week-end) sont rattrapés automatiquement. L'écriture est un *UPSERT* sur l'horodatage : relancer ne crée jamais de doublon.
+- **Fenêtre glissante de 7 jours** : chaque cycle ré-exporte les 7 derniers jours et écrase/complète les heures manquantes — les retards de publication de 24-48 h (fréquents le week-end) sont rattrapés automatiquement. L'écriture est un *UPSERT* sur l'horodatage : relancer ne crée jamais de doublon.
+- **Historique étendu** : au premier lancement, l'intégration importe automatiquement `initial_history_days` jours d'historique (365 par défaut). À tout moment, l'action **`linky_ser.import_history`** (paramètre `days`, 7 à 1095, défaut 365) récupère une longue période **par tranches de 30 jours** parcourues du plus récent au plus ancien, avec une pause entre chaque requête pour ménager le portail. Si **2 tranches consécutives** sont vides ou en erreur, la remontée s'arrête : c'est le début de l'historique disponible sur le compteur (avant l'activation de la courbe de charge). Le cumul est recalculé en continuité avec la base existante (aucun saut, aucun pic négatif), et les timestamps déjà présents sont écrasés par des sommes cohérentes.
 - **Continuité garantie de la somme cumulée** : avant chaque injection, le dernier `sum` présent dans le recorder est relu (`get_last_statistics`) et la courbe continue sans trou ni remise à zéro, même si tu viens d'une autre solution (CSV, script…).
 - **Synchronisation manuelle** : bouton `button.linky_ser_sync` **et** service `linky_ser.sync_now`.
 - Léger : un cycle par jour, aucune entité température/puissance superflue.
@@ -39,6 +40,7 @@ Installation manuelle : copie `custom_components/linky_ser/` dans `<config>/cust
 ## Utilisation
 
 - Déclencher un cycle à la demande : appuie sur **Linky SER sync**, ou `Service : linky_ser.sync_now`.
+- Importer de l'historique : `Service : linky_ser.import_history` avec `days` (7 à 1095, défaut 365) — idéal pour peupler un nouveau dashboard ou rattraper une longue absence.
 - Changer de tarif : **Paramètres → Appareils et services → Linky SER → Configurer**. Les heures déjà injectées gardent leur coût historique ; seules les nouvelles heures prennent le nouveau tarif.
 - Vérification rapide : **Outils de développement → Statistiques** → `ser:linky_consumption` doit montrer la courbe cumulée et la consommation horaire (max/mean).
 
