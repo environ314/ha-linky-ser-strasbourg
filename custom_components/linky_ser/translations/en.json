@@ -1,0 +1,35 @@
+{
+  "title": "Linky SER",
+  "config": {
+    "step": {
+      "user": {
+        "title": "MaConsoLinky SER account",
+        "description": "Credentials for the Strasbourg Électricité Réseaux portal. Sync runs daily at 08:00 with a 5-day catch-up window.",
+        "data": {
+          "email": "Email address",
+          "password": "Password",
+          "price": "Price (€/kWh)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Login refused: check the email address and password."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Linky SER",
+        "data": {
+          "price": "Price (€/kWh)"
+        }
+      }
+    }
+  },
+  "services": {
+    "sync_now": {
+      "name": "Sync now",
+      "description": "Runs a full cycle (login + 5-day export + statistics injection)."
+    }
+  }
+}

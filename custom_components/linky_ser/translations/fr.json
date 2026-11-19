@@ -1,0 +1,35 @@
+{
+  "title": "Linky SER",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Compte MaConsoLinky SER",
+        "description": "Identifiants du portail Strasbourg Électricité Réseaux. La synchronisation a lieu tous les jours à 08h00, avec une fenêtre de rattrapage de 5 jours.",
+        "data": {
+          "email": "Adresse mail",
+          "password": "Mot de passe",
+          "price": "Tarif (€/kWh)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Connexion refusée : vérifie l'adresse mail et le mot de passe."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Linky SER",
+        "data": {
+          "price": "Tarif (€/kWh)"
+        }
+      }
+    }
+  },
+  "services": {
+    "sync_now": {
+      "name": "Synchroniser maintenant",
+      "description": "Déclenche un cycle complet (connexion + export 5 jours + injection des statistiques)."
+    }
+  }
+}

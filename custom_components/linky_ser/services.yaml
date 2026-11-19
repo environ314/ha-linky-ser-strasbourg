@@ -1,0 +1,6 @@
+sync_now:
+  name: Synchroniser maintenant
+  description: >-
+    Déclenche un cycle complet : connexion MaConsoLinky SER, export de la
+    courbe de charge des 5 derniers jours, puis injection/écrasement des
+    statistiques ser:linky_consumption (kWh) et ser:linky_cost (€).
