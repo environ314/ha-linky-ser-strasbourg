@@ -1,5 +1,7 @@
 # Linky SER Strasbourg — courbe de charge Strasbourg Électricité Réseaux pour Home Assistant
 
+![Logo Linky SER Strasbourg](logo.png)
+
 Intégration [Home Assistant](https://www.home-assistant.io) pour les compteurs **Linky du réseau de Strasbourg Électricité Réseaux (SER)** (Strasbourg Eurométropole — **pas** Enedis : le portail est [MaConsoLinky](https://maconsolinky.strasbourg-electricite-reseaux.fr)).
 
 Elle récupère la **courbe de charge** (puissance moyenne par pas de 30 min) et l'injecte dans les **Long-Term Statistics** de Home Assistant, exactement comme le font les intégrations officielles type `ha-linky` / `gazpar` : pas de capteur temps réel faux, pas d'écriture directe en base — uniquement l'API `recorder` (`async_add_external_statistics`).
